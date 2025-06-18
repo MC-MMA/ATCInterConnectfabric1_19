@@ -1,0 +1,11 @@
+Manifest-Version: 1.0
+Specification-Title: ATC InterConnect Fabric
+Specification-Vendor: BeiChen
+Specification-Version: 1.1.0
+Implementation-Title: ICFabric1.19.x
+Implementation-Version: 1.1.0+mc1.19.2
+Implementation-Vendor: BeiChen
+Implementation-Timestamp: 2025-06-18T15:41:23+0800
+Minecraft-Version: 1.19.2
+Fabric-API-Version: 0.76.0+1.19.2
+

@@ -1,0 +1,34 @@
+{
+	"schemaVersion": 1,
+	"id": "atcinterconnectfabric",
+	"version": "1.1.0",
+	"name": "ATC InterConnect Fabric",
+	"description": "A cross-server communication mod for Minecraft Fabric, enabling real-time player events and chat synchronization across multiple servers via WebSocket connections.",
+	"authors": [
+		"BeiChen"
+	],
+	"icon": "assets/atcinterconnectfabric/icon.png",
+	"environment": "server",
+	"entrypoints": {
+		"main": [
+			"com.atc.interconnect.AtcInterConnectMod"
+		]
+	},
+	"mixins": [],
+	"depends": {
+		"fabricloader": ">=0.14.0",
+		"fabric-api": ">=0.58.0",
+		"minecraft": ">=1.19 <=1.19.4",
+		"java": ">=17"
+	},
+	"suggests": {},
+	"custom": {
+		"modmenu": {
+			"badges": ["server"],
+			"parent": {
+				"id": "fabric-api",
+				"name": "Fabric API"
+			}
+		}
+	}
+}

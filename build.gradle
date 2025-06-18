@@ -1,0 +1,227 @@
+plugins {
+	id 'fabric-loom' version '1.6-SNAPSHOT'
+	id 'maven-publish'
+}
+
+// 检查并设置默认属性值
+if (!project.hasProperty('minecraft_version')) {
+	ext.minecraft_version = '1.19.2'
+}
+if (!project.hasProperty('yarn_mappings')) {
+	ext.yarn_mappings = '1.19.2+build.28'
+}
+if (!project.hasProperty('fabric_version')) {
+	ext.fabric_version = '0.76.0+1.19.2'
+}
+if (!project.hasProperty('loader_version')) {
+	ext.loader_version = '0.14.22'
+}
+if (!project.hasProperty('mod_version')) {
+	ext.mod_version = '2.0.1-1.19'
+}
+if (!project.hasProperty('maven_group')) {
+	ext.maven_group = 'com.atc.interconnect'
+}
+if (!project.hasProperty('archives_base_name')) {
+	ext.archives_base_name = 'atcinterconnectfabric'
+}
+
+version = project.mod_version
+group = project.maven_group
+
+// Support for multiple Minecraft versions
+def mcVersion = project.minecraft_version
+def isMultiVersionBuild = project.hasProperty('multi_version_build') && project.multi_version_build.toBoolean()
+
+base {
+	archivesName = project.archives_base_name + (isMultiVersionBuild ? "-mc${mcVersion}" : "")
+}
+
+repositories {
+	// These repositories are required for Fabric and some common dependencies
+	maven {
+		name = 'ParchmentMC'
+		url = 'https://maven.parchmentmc.org'
+	}
+	maven {
+		name = 'Quilt Maven'
+		url = 'https://maven.quiltmc.org/repository/release'
+	}
+	maven {
+		name = 'Fabric Maven'
+		url = 'https://maven.fabricmc.net/'
+	}
+}
+
+loom {
+	// Enable access transformers if needed
+	// accessWidenerPath = file("src/main/resources/atcinterconnectfabric.accesswidener")
+
+	splitEnvironmentSourceSets()
+
+	mods {
+		"atcinterconnectfabric" {
+			sourceSet sourceSets.main
+			sourceSet sourceSets.client
+		}
+	}
+}
+
+dependencies {
+	// Minecraft and Fabric Loader
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
+	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+
+	// Fabric API - required for most Fabric mods
+	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+
+	// Individual Fabric API modules (these are included in fabric-api but listed for clarity)
+	// Uncomment if you want to use specific modules instead of the full API
+	// modImplementation "net.fabricmc.fabric-api:fabric-networking-api-v1:${project.fabric_version}"
+	// modImplementation "net.fabricmc.fabric-api:fabric-lifecycle-events-v1:${project.fabric_version}"
+	// modImplementation "net.fabricmc.fabric-api:fabric-message-api-v1:${project.fabric_version}"
+	// modImplementation "net.fabricmc.fabric-api:fabric-entity-events-v1:${project.fabric_version}"
+
+	// HTTP client for WebSocket connections (included in Java 11+)
+	// No additional dependencies needed for java.net.http
+
+	// Logging (included with Minecraft/Fabric)
+	compileOnly 'org.apache.logging.log4j:log4j-api:2.20.0'
+}
+
+processResources {
+	inputs.property "version", project.version
+	inputs.property "minecraft_version", project.minecraft_version
+	inputs.property "loader_version", project.loader_version
+	filteringCharset "UTF-8"
+
+	filesMatching("fabric.mod.json") {
+		expand "version": project.version,
+				"minecraft_version": project.minecraft_version,
+				"loader_version": project.loader_version
+	}
+}
+
+def targetJavaVersion = 17
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.encoding = "UTF-8"
+	if (targetJavaVersion >= 10 || JavaVersion.current().isJava10Compatible()) {
+		it.options.release = targetJavaVersion
+	}
+}
+
+java {
+	def javaVersion = JavaVersion.toVersion(targetJavaVersion)
+	if (JavaVersion.current() < javaVersion) {
+		toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
+	}
+	archivesBaseName = project.archives_base_name
+	withSourcesJar()
+}
+
+jar {
+	from("LICENSE") {
+		rename { "${it}_${project.archivesBaseName}"}
+	}
+
+	// Add Minecraft version to jar filename
+	archiveClassifier = "mc${project.minecraft_version}"
+
+	manifest {
+		attributes([
+				"Specification-Title": project.mod_name,
+				"Specification-Vendor": project.mod_author,
+				"Specification-Version": project.version,
+				"Implementation-Title": project.name,
+				"Implementation-Version": "${project.version}+mc${project.minecraft_version}",
+				"Implementation-Vendor": project.mod_author,
+				"Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ"),
+				"Minecraft-Version": project.minecraft_version,
+				"Fabric-API-Version": project.fabric_version
+		])
+	}
+}
+
+// Configure the maven publication
+publishing {
+	publications {
+		maven(MavenPublication) {
+			from components.java
+		}
+	}
+
+	// See https://docs.gradle.org/current/userguide/publishing_maven.html for information on how to set up publishing.
+	repositories {
+		// Add repositories to publish to here.
+		// Notice: This block does NOT have the same function as the block in the top level.
+		// The repositories here will be used for publishing your artifact, not for
+		// retrieving dependencies.
+	}
+}
+
+// Disable the test task if you don't have tests yet
+test {
+	enabled = false
+}
+
+// Multi-version build support
+task buildAll {
+	description = 'Builds the mod for all supported Minecraft versions'
+	group = 'build'
+}
+
+// Define supported versions for 1.19 series
+def supportedVersions = [
+		'1.19': [
+				minecraft: '1.19',
+				yarn: '1.19+build.4',
+				fabric: '0.58.0+1.19',
+				loader: '0.14.0'
+		],
+		'1.19.1': [
+				minecraft: '1.19.1',
+				yarn: '1.19.1+build.6',
+				fabric: '0.58.5+1.19.1',
+				loader: '0.14.6'
+		],
+		'1.19.2': [
+				minecraft: '1.19.2',
+				yarn: '1.19.2+build.28',
+				fabric: '0.76.0+1.19.2',
+				loader: '0.14.22'
+		],
+		'1.19.3': [
+				minecraft: '1.19.3',
+				yarn: '1.19.3+build.5',
+				fabric: '0.73.2+1.19.3',
+				loader: '0.14.17'
+		],
+		'1.19.4': [
+				minecraft: '1.19.4',
+				yarn: '1.19.4+build.2',
+				fabric: '0.87.0+1.19.4',
+				loader: '0.14.19'
+		]
+]
+
+// Create build tasks for each version
+supportedVersions.each { versionKey, versionData ->
+	task "build${versionKey.replace('.', '_')}" (type: GradleBuild) {
+		description = "Builds the mod for Minecraft ${versionKey}"
+		group = 'build'
+
+		startParameter.projectProperties = [
+				'minecraft_version': versionData.minecraft,
+				'yarn_mappings': versionData.yarn,
+				'fabric_version': versionData.fabric,
+				'loader_version': versionData.loader,
+				'multi_version_build': 'true'
+		]
+
+		tasks = ['clean', 'build']
+	}
+
+	buildAll.dependsOn "build${versionKey.replace('.', '_')}"
+}

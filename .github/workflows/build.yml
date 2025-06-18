@@ -1,0 +1,77 @@
+# Automatically build the project and run any configured tests for every push
+# and submitted pull request. This can help catch issues that only occur on
+# certain platforms or Java versions, and provides a first line of defence
+# against bad commits.
+
+name: build
+on: 
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        # Use these Java versions
+        java: [
+          21,    # Current Java LTS
+        ]
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v4
+        
+      - name: validate gradle wrapper
+        uses: gradle/wrapper-validation-action@v2
+        
+      - name: setup jdk ${{ matrix.java }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ matrix.java }}
+          distribution: 'microsoft'
+          
+      - name: make gradle wrapper executable
+        run: chmod +x ./gradlew
+        
+      - name: build
+        run: ./gradlew build
+
+      - name: clean useless files
+        run: rm -rf build/libs/*-sources.jar
+      
+      - name: capture build artifacts
+        if: ${{ matrix.java == '21' }} # Only upload artifacts built from latest java
+        uses: actions/upload-artifact@v4
+        with:
+          name: Artifacts
+          path: build/libs/
+
+      - uses: guillermocalvo/gradle-properties@v3
+        id: properties
+        with:
+          output_file: ${{ github.output }}
+          export: mod_version
+          
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.properties.outputs.mod_version }}
+          release_name: "${{ steps.properties.outputs.mod_version }} Release"
+          draft: false
+          prerelease: false
+
+      - name: Upload Release Asset
+        id: upload-release-asset 
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} 
+          asset_path: "build/libs/atcinterconnectfabric-${{ steps.properties.outputs.mod_version }}.jar"
+          asset_name: "atcinterconnectfabric-${{ steps.properties.outputs.mod_version }}.jar"
+          asset_content_type: application/java-archive
+        
