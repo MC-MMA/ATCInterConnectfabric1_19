@@ -1,7 +1,7 @@
 {
 	"schemaVersion": 1,
 	"id": "atcinterconnectfabric",
-	"version": "1.1.0",
+	"version": "1.1.1-fix",
 	"name": "ATC InterConnect Fabric",
 	"description": "A cross-server communication mod for Minecraft Fabric, enabling real-time player events and chat synchronization across multiple servers via WebSocket connections.",
 	"authors": [
